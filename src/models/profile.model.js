@@ -1,3 +1,4 @@
+// ! ARCHIVO BASE: no modificar
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 

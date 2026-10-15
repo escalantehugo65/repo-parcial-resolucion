@@ -1,3 +1,4 @@
+// ! ARCHIVO BASE: no modificar
 import { Router } from "express";
 import { deleteUser, getAllUsers } from "../controllers/users.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";

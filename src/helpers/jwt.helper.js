@@ -1,3 +1,4 @@
+// ! ARCHIVO BASE: no modificar
 import jwt from "jsonwebtoken";
 
 export const signToken = (payload) =>

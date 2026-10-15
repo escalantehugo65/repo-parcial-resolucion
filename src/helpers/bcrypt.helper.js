@@ -1,3 +1,4 @@
+// ! ARCHIVO BASE: no modificar
 import bcrypt from "bcrypt";
 
 export const hashPassword = async (password) => {

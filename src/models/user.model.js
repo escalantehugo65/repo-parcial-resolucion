@@ -1,3 +1,4 @@
+// * ARCHIVO A COMPLETAR
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 
@@ -10,4 +11,7 @@ export const UserModel = sequelize.define("User", {
     allowNull: false,
     defaultValue: "developer",
   },
-}, { paranoid: true });
+  // TODO: 1. Activar la eliminación lógica (paranoid) en las opciones del modelo.
+},
+  { paranoid: true }
+);

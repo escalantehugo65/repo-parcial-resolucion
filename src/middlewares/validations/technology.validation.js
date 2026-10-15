@@ -1,3 +1,4 @@
+// ! ARCHIVO BASE: no modificar
 import { body } from "express-validator";
 import { TechnologyModel } from "../../models/index.js";
 

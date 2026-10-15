@@ -1,3 +1,4 @@
+// ! ARCHIVO BASE: no modificar
 import { verifyToken } from "../helpers/jwt.helper.js";
 
 export const authMiddleware = (req, res, next) => {

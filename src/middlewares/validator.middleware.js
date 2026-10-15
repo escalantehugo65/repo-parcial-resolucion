@@ -1,3 +1,4 @@
+// ! ARCHIVO BASE: no modificar
 import { validationResult } from "express-validator";
 
 export const validator = (req, res, next) => {

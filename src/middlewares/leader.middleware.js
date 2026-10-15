@@ -1,3 +1,4 @@
+// ! ARCHIVO BASE: no modificar
 import { ProjectModel } from "../models/index.js";
 
 export const leaderMiddleware = async (req, res, next) => {
