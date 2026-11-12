@@ -1,10 +1,10 @@
 // * ARCHIVO A COMPLETAR
-import { ProjectModel, TechnologyModel, UserModel } from "../models/index.js";
-
-const projectInclude = [
-  { model: UserModel, as: "leader", attributes: { exclude: ["password"] } },
-  { model: TechnologyModel, as: "technologies", through: { attributes: [] } },
-];
+import {
+  ProjectModel,
+  ProjectTechnologyModel,
+  TechnologyModel,
+  UserModel,
+} from "../models/index.js";
 
 export const createProject = async (req, res) => {
   try {
@@ -12,14 +12,40 @@ export const createProject = async (req, res) => {
     // ? Revisar de dónde debe salir el leader del proyecto.
     // TODO: 2. Asociar al project las technologies recibidas.
     // TODO: 3. Responder con código 201 y el project con sus technologies y su leader.
-    const { code, name, description, status, start_date, budget, leader_id, technologies } = req.body;
-    const project = await ProjectModel.sequelize.transaction(async (transaction) => {
-      const created = await ProjectModel.create({
-        code, name, description, status, start_date, budget, leader_id,
-      }, { transaction });
-      await created.setTechnologies(technologies, { transaction });
-      return ProjectModel.findByPk(created.id, { include: projectInclude, transaction });
+    const {
+      code,
+      name,
+      description,
+      status,
+      start_date,
+      budget,
+      leader_id,
+      technologies,
+    } = req.body;
+
+    const project = await ProjectModel.create({
+      code,
+      name,
+      description,
+      status,
+      start_date,
+      budget,
+      leader_id,
     });
+
+    await project.setTechnologies(technologies);
+
+    await project.reload({
+      include: [
+        {
+          model: UserModel,
+          as: "leader",
+          attributes: { exclude: ["password"] },
+        },
+        { model: TechnologyModel, as: "technologies" },
+      ],
+    });
+
     return res.status(201).json({ data: project });
   } catch (error) {
     console.log(error);
@@ -30,7 +56,17 @@ export const createProject = async (req, res) => {
 export const getAllProjects = async (_req, res) => {
   try {
     // TODO: 1. Listar todos los projects incluyendo su leader (sin la password) y sus technologies, y responder con código 200 y los projects..
-    const projects = await ProjectModel.findAll({ include: projectInclude });
+    const projects = await ProjectModel.findAll({
+      include: [
+        {
+          model: UserModel,
+          as: "leader",
+          attributes: { exclude: ["password"] },
+        },
+        { model: TechnologyModel, as: "technologies" },
+      ],
+    });
+
     return res.status(200).json({ data: projects });
   } catch (error) {
     console.log(error);
@@ -43,8 +79,9 @@ export const getMyProjects = async (req, res) => {
     // TODO: 1. Listar los projects cuyo leader sea el usuario logueado, incluyendo sus technologies, y responder con código 200 y los projects.
     const projects = await ProjectModel.findAll({
       where: { leader_id: req.user.id },
-      include: [{ model: TechnologyModel, as: "technologies", through: { attributes: [] } }],
+      include: [{ model: TechnologyModel, as: "technologies" }],
     });
+
     return res.status(200).json({ data: projects });
   } catch (error) {
     console.log(error);
@@ -57,21 +94,50 @@ export const updateProject = async (req, res) => {
     // TODO: 1. Actualizar el project con los datos recibidos.
     // TODO: 2. Reemplazar sus technologies si vienen en el body.
     // TODO: 3. Responder con código 200 y el project actualizado, incluyendo su leader y sus technologies.
-    const project = await ProjectModel.findByPk(req.params.id);
-    if (!project) return res.status(404).json({ msg: "Proyecto no encontrado" });
-    const fields = ["code", "name", "description", "status", "start_date", "budget", "leader_id"];
-    const changes = {};
-    for (const field of fields) {
-      if (req.body[field] !== undefined) changes[field] = req.body[field];
+    const { id } = req.params;
+    const {
+      code,
+      name,
+      description,
+      status,
+      start_date,
+      budget,
+      leader_id,
+      technologies,
+    } = req.body;
+
+    const project = await ProjectModel.findByPk(id);
+
+    if (!project) {
+      return res.status(404).json({ msg: "Proyecto no encontrado" });
     }
-    const updated = await ProjectModel.sequelize.transaction(async (transaction) => {
-      await project.update(changes, { transaction });
-      if (req.body.technologies !== undefined) {
-        await project.setTechnologies(req.body.technologies, { transaction });
-      }
-      return ProjectModel.findByPk(project.id, { include: projectInclude, transaction });
+
+    await project.update({
+      code,
+      name,
+      description,
+      status,
+      start_date,
+      budget,
+      leader_id,
     });
-    return res.status(200).json({ data: updated });
+
+    if (technologies !== undefined) {
+      await project.setTechnologies(technologies);
+    }
+
+    await project.reload({
+      include: [
+        {
+          model: UserModel,
+          as: "leader",
+          attributes: { exclude: ["password"] },
+        },
+        { model: TechnologyModel, as: "technologies" },
+      ],
+    });
+
+    return res.status(200).json({ data: project });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ msg: "Error interno del servidor" });
@@ -81,9 +147,16 @@ export const updateProject = async (req, res) => {
 export const deleteProject = async (req, res) => {
   try {
     // TODO: 1. Eliminar el project y responder con código 204 sin devolver ningún mensaje.
-    const project = await ProjectModel.findByPk(req.params.id);
-    if (!project) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    const { id } = req.params;
+
+    const project = await ProjectModel.findByPk(id);
+
+    if (!project) {
+      return res.status(404).json({ msg: "Proyecto no encontrado" });
+    }
+
     await project.destroy();
+
     return res.status(204).send();
   } catch (error) {
     console.log(error);

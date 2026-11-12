@@ -9,23 +9,31 @@ export const register = async (req, res) => {
     // TODO: 2. Crear el user y su profile asociado.
     // TODO: 3. Responder con código 201, un mensaje de éxito y devolver el usuario sin la password.
     const { username, email, password, role, profile } = req.body;
+
     const hashedPassword = await hashPassword(password);
-    const user = await UserModel.sequelize.transaction(async (transaction) => {
-      const newUser = await UserModel.create({
-        username, email, password: hashedPassword, role: role ?? "developer",
-      }, { transaction });
-      await ProfileModel.create({
-        user_id: newUser.id,
-        employee_number: profile.employee_number,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        phone: profile.phone || null,
-      }, { transaction });
-      return newUser;
-    });
+
+    const user = await UserModel.create(
+      {
+        username,
+        email,
+        password: hashedPassword,
+        role,
+        profile: {
+          employee_number: profile.employee_number,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          phone: profile.phone,
+        },
+      },
+      { include: [{ model: ProfileModel, as: "profile" }] },
+    );
+
+    const data = user.toJSON();
+    delete data.password;
+
     return res.status(201).json({
       msg: "Usuario registrado correctamente",
-      user: { id: user.id, username: user.username, email: user.email, role: user.role },
+      data,
     });
   } catch (error) {
     console.log(error);
@@ -40,12 +48,23 @@ export const login = async (req, res) => {
     // TODO: 3. Guardar el token en una cookie httpOnly llamada "token", responder con código 200 y un mensaje de éxito.
     // ? Considerar qué mensaje devolver ante credenciales inválidas.
     const { email, password } = req.body;
+
     const user = await UserModel.findOne({ where: { email } });
-    if (!user || !(await comparePassword(password, user.password))) {
+
+    if (!user) {
       return res.status(401).json({ msg: "Credenciales inválidas" });
     }
+
+    const validPassword = await comparePassword(password, user.password);
+
+    if (!validPassword) {
+      return res.status(401).json({ msg: "Credenciales inválidas" });
+    }
+
     const token = signToken({ id: user.id, role: user.role });
-    res.cookie("token", token, { httpOnly: true, maxAge: 60 * 60 * 1000 });
+
+    res.cookie("token", token, { httpOnly: true });
+
     return res.status(200).json({ msg: "Sesión iniciada correctamente" });
   } catch (error) {
     console.log(error);
@@ -57,6 +76,7 @@ export const logout = async (_req, res) => {
   try {
     // TODO: 1. Eliminar la cookie "token" y responder con código 204 sin devolver ningun mensaje.
     res.clearCookie("token");
+
     return res.status(204).send();
   } catch (error) {
     console.log(error);
